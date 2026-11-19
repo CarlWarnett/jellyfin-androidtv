@@ -6,6 +6,21 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.AbstractComposeView
+import kotlinx.coroutines.flow.map
+import org.jellyfin.androidtv.ui.shared.rail.ExitDialog
+import org.jellyfin.androidtv.ui.shared.rail.NavRail
+import org.jellyfin.androidtv.ui.shared.rail.NavRailState
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -34,12 +49,15 @@ import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
 
+private const val COMPOSE_ROOT_VIEW = "androidx.compose.ui.platform.AndroidComposeView"
+
 class MainActivity : FragmentActivity() {
 	private val navigationRepository by inject<NavigationRepository>()
 	private val sessionRepository by inject<SessionRepository>()
 	private val userRepository by inject<UserRepository>()
 	private val interactionTrackerViewModel by viewModel<InteractionTrackerViewModel>()
 	private val workManager by inject<WorkManager>()
+	private val navRailState = NavRailState()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		applyTheme()
@@ -68,9 +86,34 @@ class MainActivity : FragmentActivity() {
 					interactionTracker = { interactionTrackerViewModel.notifyInteraction(false, userInitiated = true) }
 				) {
 					AppBackground()
-					AppNavigationHost(
-						navigationRepository = navigationRepository,
+					Row(Modifier.fillMaxSize()) {
+						NavRail(state = navRailState)
+						AppNavigationHost(
+							navigationRepository = navigationRepository,
+							modifier = Modifier
+								.weight(1f)
+								.fillMaxHeight(),
+						)
+					}
+
+					// Back: from a main screen's content go to the menu; on the Home menu ask before exiting.
+					// Registered after AppNavigationHost, so these win over its "go back" handler when enabled.
+					val canGoBack by remember {
+						navigationRepository.currentDestination.map { navigationRepository.canGoBack }
+					}.collectAsState(navigationRepository.canGoBack)
+					var showExit by remember { mutableStateOf(false) }
+					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && navRailState.onTopLevelScreen) {
+						if (!navRailState.requestFocus()) navigationRepository.goBack()
+					}
+					BackHandler(enabled = navRailState.visible && navRailState.hasFocus && !canGoBack) {
+						showExit = true
+					}
+					ExitDialog(
+						visible = showExit,
+						onExit = { finish() },
+						onDismiss = { showExit = false },
 					)
+
 					InAppScreensaver()
 					MainActivitySettings()
 				}
@@ -114,6 +157,19 @@ class MainActivity : FragmentActivity() {
 			Timber.i("MainActivity stopped")
 			sessionRepository.restoreSession(destroyOnly = true)
 		}
+	}
+
+	// Left at the left edge of the content moves into the menu. Only for classic views (the old
+	// leanback screens); Compose screens move focus themselves and report the root view here.
+	override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+		if (event.keyCode != KeyEvent.KEYCODE_DPAD_LEFT || event.action != KeyEvent.ACTION_DOWN
+			|| !navRailState.visible || navRailState.hasFocus) return super.dispatchKeyEvent(event)
+
+		val before = currentFocus
+		val handled = super.dispatchKeyEvent(event)
+		if (before != null && before !is AbstractComposeView && before::class.java.name != COMPOSE_ROOT_VIEW
+			&& currentFocus === before && navRailState.requestFocus()) return true
+		return handled
 	}
 
 	// Forward key events to fragments

@@ -815,6 +815,16 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mLetterButton.setContentDescription(getString(R.string.lbl_by_letter));
         binding.toolBar.addView(mLetterButton);
 
+        // Always-visible A–Z strip on the right (same filter as the letter button's popup)
+        binding.alphaJump.setSelected(mAdapter != null ? mAdapter.getStartLetter() : null);
+        binding.alphaJump.setOnLetterSelected(letter -> {
+            if (mAdapter == null) return null;
+            mAdapter.setStartLetter(letter);
+            binding.alphaJump.setSelected(letter);
+            loadGrid();
+            return null;
+        });
+
         if (mFolder.getDisplayPreferencesId() != null) {
             MutableStateFlow<Boolean> settingsVisible = BrowseGridFragmentHelperKt.createSettingsVisibility(BrowseGridFragment.this);
             mSettingsButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
@@ -849,6 +859,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             alphaPicker = new AlphaPickerView(requireContext(), null);
             alphaPicker.setOnAlphaSelected(letter -> {
                 mAdapter.setStartLetter(letter.toString());
+                binding.alphaJump.setSelected(letter.toString());
                 loadGrid();
                 dismiss();
                 return null;
