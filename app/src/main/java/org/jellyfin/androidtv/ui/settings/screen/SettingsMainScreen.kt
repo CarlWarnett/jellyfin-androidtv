@@ -2,6 +2,8 @@ package org.jellyfin.androidtv.ui.settings.screen
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import org.jellyfin.androidtv.util.LogFile
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
@@ -72,6 +74,16 @@ fun SettingsMainScreen() {
 				modifier = Modifier.focusKey(Routes.TELEMETRY),
 			)
 
+		}
+
+		item {
+			val context = LocalContext.current
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_upload), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_send_log)) },
+				captionContent = { Text(stringResource(R.string.pref_send_log_description)) },
+				onClick = { LogFile.share(context) },
+			)
 		}
 
 		item {

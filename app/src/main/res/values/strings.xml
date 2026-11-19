@@ -219,6 +219,8 @@
     <string name="lbl_stretch">Stretch</string>
     <string name="lbl_fit">Normal</string>
     <string name="lbl_audio_track">Select audio track</string>
+    <string name="pref_send_log">Send log</string>
+    <string name="pref_send_log_description">Share the app log, e.g. to your phone with LocalSend</string>
     <string name="lbl_profanity_filter_on">Profanity filter: on</string>
     <string name="lbl_profanity_filter_off">Profanity filter: off</string>
     <string name="msg_profanity_filter_on">Clean audio on</string>

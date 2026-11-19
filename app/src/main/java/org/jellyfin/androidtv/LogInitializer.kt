@@ -21,6 +21,8 @@ class LogInitializer : Initializer<Unit> {
 
 		// Initialize the logging library
 		Timber.plant(Timber.DebugTree())
+		// Also keep the log in a file so it can be sent from Settings > Send log
+		Timber.plant(org.jellyfin.androidtv.util.LogFile.tree(context))
 		Timber.i("Debug tree planted")
 	}
 

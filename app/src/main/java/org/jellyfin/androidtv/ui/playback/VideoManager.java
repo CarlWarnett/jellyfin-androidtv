@@ -103,9 +103,8 @@ public class VideoManager {
 
         mExoPlayer = configureExoplayerBuilder(activity, assHandler).build();
 
-        if (userPreferences.get(UserPreferences.Companion.getDebuggingEnabled())) {
-            mExoPlayer.addAnalyticsListener(new EventLogger());
-        }
+        // Always log player events (track selection, seeks, errors) so Settings > Send log captures them
+        mExoPlayer.addAnalyticsListener(new EventLogger());
 
         // Volume normalisation (audio night mode).
         if (nightModeEnabled) {
@@ -193,6 +192,14 @@ public class VideoManager {
             @Override
             public void onTracksChanged(Tracks tracks) {
                 Timber.d("Tracks changed");
+                for (Tracks.Group group : tracks.getGroups()) {
+                    if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+                    for (int i = 0; i < group.length; i++) {
+                        Format format = group.getTrackFormat(i);
+                        Timber.i("Text track id=%s lang=%s label=%s mime=%s supported=%s selected=%s",
+                                format.id, format.language, format.label, format.sampleMimeType, group.isTrackSupported(i), group.isTrackSelected(i));
+                    }
+                }
             }
         });
     }

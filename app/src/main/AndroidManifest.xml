@@ -86,6 +86,17 @@
                 android:value="androidx.startup" />
         </provider>
 
+        <!-- Shares the log file from Settings > Send log -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.logs"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/log_file_paths" />
+        </provider>
+
         <provider
             android:name=".integration.MediaContentProvider"
             android:authorities="${applicationId}.content"
