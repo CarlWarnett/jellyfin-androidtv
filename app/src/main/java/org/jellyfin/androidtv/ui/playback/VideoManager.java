@@ -19,6 +19,8 @@ import androidx.annotation.OptIn;
 import androidx.core.graphics.TypefaceCompat;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+import androidx.media3.common.text.Cue;
+import androidx.media3.common.text.CueGroup;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -187,6 +189,14 @@ public class VideoManager {
             @Override
             public void onTimelineChanged(@NonNull Timeline timeline, int reason) {
                 Timber.d("Caught player timeline change - reason: %s", reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED ? "PLAYLIST_CHANGED" : "SOURCE_UPDATE");
+            }
+
+            @Override
+            public void onCues(@NonNull CueGroup cueGroup) {
+                // Logs each subtitle line handed to the screen (for Settings > Send log)
+                StringBuilder text = new StringBuilder();
+                for (Cue cue : cueGroup.cues) if (cue.text != null) text.append(cue.text).append(" / ");
+                Timber.d("Subtitle cue at %dms: %s", cueGroup.presentationTimeUs / 1000, text.length() == 0 ? "(clear)" : text.toString().replace('\n', ' '));
             }
 
             @Override
