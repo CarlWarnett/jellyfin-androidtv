@@ -6,6 +6,13 @@ on:
   push:
     tags:
       - v*
+  release:
+    types: [published]
+
+# Creating a release on github.com fires both events; only build once per tag
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   release:
