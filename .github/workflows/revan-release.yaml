@@ -47,4 +47,9 @@ jobs:
         run: |
           APK="jellyfin-clean-${GITHUB_REF_NAME}.apk"
           mv app/build/outputs/apk/release/jellyfin-androidtv-*-release.apk "$APK"
-          gh release create "$GITHUB_REF_NAME" "$APK" --title "Jellyfin Clean $GITHUB_REF_NAME" --generate-notes
+          # The release may already exist if it was created on github.com (which also creates the tag)
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$APK" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$APK" --title "Jellyfin Clean $GITHUB_REF_NAME" --generate-notes
+          fi
