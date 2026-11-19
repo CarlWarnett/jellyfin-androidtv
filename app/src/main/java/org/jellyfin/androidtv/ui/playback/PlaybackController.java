@@ -85,6 +85,10 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     protected VideoOptions mCurrentOptions;
     private int mDefaultAudioIndex = -1;
     protected boolean burningSubs = false;
+    // Whether the subtitle and audio selection has been applied to the stream loaded in the player.
+    // onPrepared() runs every time playback (re)starts, including after each seek. Re-applying the
+    // subtitle selection there drops sideloaded (EXTERNAL) subtitles, so apply it once per loaded stream.
+    private boolean tracksApplied = false;
 
     // The server does not update the subtitle delivery method when alwaysBurnInSubtitleWhenTranscoding
     // is set, so we need to assume subs are burned in when transcoding with the option enabled.
@@ -711,6 +715,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         if (mFragment != null) mFragment.updateDisplay();
 
         if (mVideoManager != null) {
+            tracksApplied = false;
             mVideoManager.setMediaStreamInfo(api.getValue(), response);
         }
 
@@ -1046,6 +1051,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                     updateBurningSubs(response);
 
                     if (mVideoManager != null) {
+                        tracksApplied = false;
                         mVideoManager.setMediaStreamInfo(api.getValue(), response);
                         mVideoManager.start();
                     }
@@ -1267,7 +1273,8 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
         if (mPlaybackState == PlaybackState.PAUSED) {
             mPlaybackState = PlaybackState.PLAYING;
-        } else {
+        } else if (!tracksApplied) {
+            tracksApplied = true;
             if (!burningSubs) {
                 // Make sure the requested subtitles are enabled when external/embedded
                 Integer currentSubtitleIndex = mCurrentOptions.getSubtitleStreamIndex();
