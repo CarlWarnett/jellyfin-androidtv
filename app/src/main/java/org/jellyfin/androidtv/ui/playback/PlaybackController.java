@@ -214,6 +214,21 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         }
     }
 
+    public boolean isProfanityFilterEnabled() {
+        return userPreferences.getValue().get(UserPreferences.Companion.getProfanityFilterEnabled());
+    }
+
+    /** Turns the profanity filter on or off and switches the audio (and subtitles, if shown) to match. */
+    public void setProfanityFilterEnabled(boolean enabled) {
+        userPreferences.getValue().set(UserPreferences.Companion.getProfanityFilterEnabled(), enabled);
+        MediaSourceInfo source = getCurrentMediaSource();
+        Integer audio = enabled ? CleanAudio.cleanAudioIndex(source) : CleanAudio.originalAudioIndex(source);
+        if (audio != null) switchAudioStream(audio);
+        int currentSubs = getSubtitleStreamIndex();
+        Integer subs = CleanAudio.preferredSubtitleIndex(source, currentSubs, enabled);
+        if (subs != null && subs != currentSubs) PlaybackControllerHelperKt.setSubtitleIndex(this, subs);
+    }
+
     public StreamInfo getCurrentStreamInfo() {
         return mCurrentStreamInfo;
     }
@@ -539,6 +554,12 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 }
             }
         }
+        // Profanity filter: ask for the clean track unless a track was picked by hand for this item
+        if (!isLiveTv && isProfanityFilterEnabled()
+                && (mCurrentOptions == null || mCurrentOptions.getAudioStreamIndex() == null)) {
+            Integer cleanIndex = CleanAudio.cleanAudioIndex(currentMediaSource);
+            if (cleanIndex != null) internalOptions.setAudioStreamIndex(cleanIndex);
+        }
         if (!isLiveTv && currentMediaSource != null) {
             internalOptions.setMediaSourceId(currentMediaSource.getId());
         }
@@ -669,6 +690,9 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             // No saved preference, use server default
             mCurrentOptions.setSubtitleStreamIndex(response.getMediaSource().getDefaultSubtitleStreamIndex());
         }
+        // Profanity filter: show the clean subtitles instead of the normal English ones (or the reverse when off)
+        mCurrentOptions.setSubtitleStreamIndex(CleanAudio.preferredSubtitleIndex(
+                response.getMediaSource(), mCurrentOptions.getSubtitleStreamIndex(), isProfanityFilterEnabled()));
         setDefaultAudioIndex(response);
         Timber.i("default audio index set to %s remote default %s", mDefaultAudioIndex, response.getMediaSource().getDefaultAudioStreamIndex());
         Timber.i("default sub index set to %s remote default %s", mCurrentOptions.getSubtitleStreamIndex(), response.getMediaSource().getDefaultSubtitleStreamIndex());
@@ -1262,6 +1286,11 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 eligibleAudioTrack = mCurrentOptions.getAudioStreamIndex();
             } else if (getCurrentMediaSource().getDefaultAudioStreamIndex() != null) {
                 eligibleAudioTrack = getCurrentMediaSource().getDefaultAudioStreamIndex();
+            }
+            // Profanity filter: start on the clean track unless a track was picked by hand
+            if (mCurrentOptions.getAudioStreamIndex() == null && isProfanityFilterEnabled()) {
+                Integer cleanIndex = CleanAudio.cleanAudioIndex(getCurrentMediaSource());
+                if (cleanIndex != null) eligibleAudioTrack = cleanIndex;
             }
             switchAudioStream(eligibleAudioTrack);
         }

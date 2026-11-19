@@ -62,6 +62,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var mediaQueuingEnabled = booleanPreference("pref_enable_tv_queuing", true)
 
 		/**
+		 * Play the whisper-filter "Clean Audio (Muted Profanity)" track when a file has one
+		 */
+		var profanityFilterEnabled = booleanPreference("pref_profanity_filter", true)
+
+		/**
 		 * Enable the next up screen or not
 		 */
 		var nextUpBehavior = enumPreference("next_up_behavior", NextUpBehavior.EXTENDED)

@@ -39,6 +39,8 @@ import org.jellyfin.androidtv.ui.playback.overlay.action.PreviousLiveTvChannelAc
 import org.jellyfin.androidtv.ui.playback.overlay.action.RecordAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.RewindAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.SelectAudioAction;
+import org.jellyfin.androidtv.ui.playback.overlay.action.CleanAudioAction;
+import org.jellyfin.androidtv.ui.playback.CleanAudio;
 import org.jellyfin.androidtv.ui.playback.overlay.action.SelectQualityAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.SkipNextAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.SkipPreviousAction;
@@ -58,6 +60,7 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
     private SkipPreviousAction skipPreviousAction;
     private SkipNextAction skipNextAction;
     private SelectAudioAction selectAudioAction;
+    private CleanAudioAction cleanAudioAction;
     private ClosedCaptionsAction closedCaptionsAction;
     private SelectQualityAction selectQualityAction;
     private PlaybackSpeedAction playbackSpeedAction;
@@ -194,6 +197,7 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
         skipNextAction = new SkipNextAction(context);
         selectAudioAction = new SelectAudioAction(context, this);
         selectAudioAction.setLabels(new String[]{context.getString(R.string.lbl_audio_track)});
+        cleanAudioAction = new CleanAudioAction(context, this);
         closedCaptionsAction = new ClosedCaptionsAction(context, this);
         closedCaptionsAction.setLabels(new String[]{context.getString(R.string.lbl_subtitle_track)});
         selectQualityAction = new SelectQualityAction(context, this, KoinJavaComponent.get(UserPreferences.class));
@@ -241,6 +245,12 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
         if (playerAdapter.canSeek()) {
             primaryActionsAdapter.add(rewindAction);
             primaryActionsAdapter.add(fastForwardAction);
+        }
+
+        // Profanity filter switch, only for files that whisper-filter has processed
+        if (!playerAdapter.isLiveTv() && CleanAudio.cleanAudioIndex(playbackController.getCurrentMediaSource()) != null) {
+            cleanAudioAction.sync(playbackController.isProfanityFilterEnabled());
+            primaryActionsAdapter.add(cleanAudioAction);
         }
 
         if (playerAdapter.hasSubs()) {
@@ -297,6 +307,10 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
         // Handle custom action clicks which require a popup menu
         if (action instanceof CustomAction) {
             ((CustomAction) action).handleClickAction(playbackController, getPlayerAdapter(), getContext(), view);
+        }
+
+        if (action == cleanAudioAction) {
+            notifyActionChanged(action);
         }
 
         if (action == playbackSpeedAction) {
