@@ -5,6 +5,8 @@ plugins {
 	alias(libs.plugins.kotlin.serialization)
 }
 
+val APP_ID = "za.co.revansystems.jellyfin"
+
 android {
 	namespace = "org.jellyfin.androidtv"
 	compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -14,7 +16,8 @@ android {
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
 
 		// Release version
-		applicationId = namespace
+		// Own app id so "Jellyfin Clean" installs next to the official Jellyfin app
+		applicationId = APP_ID
 		versionName = project.getVersionName()
 		versionCode = getVersionCode(versionName!!)
 	}
@@ -58,9 +61,9 @@ android {
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
 			// Set package names used in various XML files
-			resValue("string", "app_id", namespace!!)
-			resValue("string", "app_search_suggest_authority", "${namespace}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace}.content/intent")
+			resValue("string", "app_id", APP_ID)
+			resValue("string", "app_search_suggest_authority", "${APP_ID}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${APP_ID}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_release")
@@ -75,9 +78,9 @@ android {
 			applicationIdSuffix = ".debug"
 
 			// Set package names used in various XML files
-			resValue("string", "app_id", namespace + applicationIdSuffix)
-			resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace + applicationIdSuffix}.content/intent")
+			resValue("string", "app_id", APP_ID + applicationIdSuffix)
+			resValue("string", "app_search_suggest_authority", "${APP_ID + applicationIdSuffix}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${APP_ID + applicationIdSuffix}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_debug")
