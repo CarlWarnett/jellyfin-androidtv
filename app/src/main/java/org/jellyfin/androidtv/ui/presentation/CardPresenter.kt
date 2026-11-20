@@ -5,6 +5,8 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -373,8 +375,10 @@ private fun CardViewHolderContent(
 					)
 				}
 			},
+			// White outline on the focused card (Plex style)
 			modifier = Modifier
 				.size(size)
+				.then(if (focused) Modifier.border(3.dp, Color.White, JellyfinTheme.shapes.medium) else Modifier)
 		)
 	}
 

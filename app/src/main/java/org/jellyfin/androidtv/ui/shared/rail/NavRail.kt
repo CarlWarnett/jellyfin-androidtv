@@ -256,7 +256,9 @@ private fun RailItem(
 			.clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 			.padding(horizontal = 14.dp),
 	) {
-		Icon(painter = icon, contentDescription = if (expanded) null else label, tint = content, modifier = Modifier.size(18.dp))
+		// The current section's icon is in Jellyfin purple
+		val iconTint = if (selected && !focused) CleanColors.Accent else content
+		Icon(painter = icon, contentDescription = if (expanded) null else label, tint = iconTint, modifier = Modifier.size(18.dp))
 		if (expanded) {
 			Spacer(Modifier.width(12.dp))
 			Text(

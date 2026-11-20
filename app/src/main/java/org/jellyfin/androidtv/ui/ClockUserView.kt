@@ -49,6 +49,7 @@ class ClockUserView @JvmOverloads constructor(
 			ClockBehavior.IN_MENUS -> !isVideoPlayer
 		}
 
-		binding.home.isVisible = !isVideoPlayer
+		// Home is in the menu on the left
+		binding.home.isVisible = false
 	}
 }

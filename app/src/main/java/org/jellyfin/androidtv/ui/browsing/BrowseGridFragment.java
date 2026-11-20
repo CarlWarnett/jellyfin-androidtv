@@ -137,8 +137,10 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         // init with some working defaults
         DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
         // top + bottom in dp, elements scale with density so adjust accordingly
-        mGridHeight = Math.round(display.heightPixels / getResources().getDisplayMetrics().density - 130.6f);
-        mGridWidth = Math.round(display.widthPixels / getResources().getDisplayMetrics().density);
+        // Space actually left for the grid: minus the info panel (180dp) and status line at the top/bottom,
+        // and the menu strip (72dp) and A–Z strip (~48dp) at the sides, so posters fit exactly
+        mGridHeight = Math.round(display.heightPixels / getResources().getDisplayMetrics().density - 225f);
+        mGridWidth = Math.round(display.widthPixels / getResources().getDisplayMetrics().density - 72f - 48f);
 
 
         mActivity = getActivity();
@@ -149,7 +151,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
-        mGridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
+        // Always a vertically scrolling grid of large posters
+        mGridDirection = GridDirection.VERTICAL;
         mCardFocusScale = getResources().getFraction(R.fraction.card_scale_focus, 1, 1);
 
         if (mGridDirection.equals(GridDirection.VERTICAL))
@@ -428,6 +431,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 default:
                     throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
             }
+            // Large posters: 6 across (wide thumbnails 4, banners 3)
+            numCols = imageType.equals(ImageType.BANNER) ? 3 : imageType.equals(ImageType.THUMB) ? 4 : 6;
             ((VerticalGridPresenter) mGridPresenter).setNumberOfColumns(numCols);
         } else if (mGridPresenter instanceof HorizontalGridPresenter) {
             int numRows;
@@ -822,6 +827,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         });
         mLetterButton.setContentDescription(getString(R.string.lbl_by_letter));
         binding.toolBar.addView(mLetterButton);
+        binding.toolBar.setVisibility(View.GONE);
 
         // A–Z strip on the right: scrolls to where a letter starts (see updateAlphaIndex)
         binding.alphaJump.setVisibility(View.GONE);
