@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.shared.rail
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -75,7 +76,9 @@ object CleanColors {
 	val Selected = Color(0x14FFFFFF)
 	val Focused = Color(0xFFF5F5F7)
 	val OnFocused = Color(0xFF0B0B0D)
-	val Accent = Color(0xFF3DD6C4)
+	// Jellyfin brand colours
+	val Accent = Color(0xFFAA5CC3)
+	val AccentBlue = Color(0xFF00A4DC)
 }
 
 /** Lets the activity move focus into the menu (Back from content, Left at the edge). */
@@ -95,7 +98,7 @@ class NavRailState {
 /** Width the content leaves free for the closed menu. */
 val NAV_RAIL_COLLAPSED_WIDTH = 72.dp
 private val COLLAPSED_WIDTH = NAV_RAIL_COLLAPSED_WIDTH
-private val EXPANDED_WIDTH = 260.dp
+private val EXPANDED_WIDTH = 240.dp
 
 /**
  * The menu down the left-hand side: Home, Search, each library, then Settings and Switch user.
@@ -132,27 +135,33 @@ fun NavRail(
 			.width(width)
 			.clip(RoundedCornerShape(if (state.hasFocus) 18.dp else 0.dp))
 			.background(if (state.hasFocus) CleanColors.Rail else Color.Transparent)
-			.padding(horizontal = 12.dp, vertical = 24.dp)
+			.padding(horizontal = 12.dp, vertical = 20.dp)
 			.focusRequester(state.focusRequester)
 			.focusRestorer()
 			.onFocusChanged { state.hasFocus = it.hasFocus }
 			.focusGroup(),
-		verticalArrangement = Arrangement.spacedBy(6.dp),
+		verticalArrangement = Arrangement.spacedBy(2.dp),
 	) {
-		// App mark
-		Row(
-			verticalAlignment = Alignment.CenterVertically,
-			modifier = Modifier.padding(start = 14.dp, bottom = 22.dp),
+		// Jellyfin logo: the full-colour wordmark when open, the mark on its own when closed
+		Box(
+			contentAlignment = Alignment.CenterStart,
+			modifier = Modifier
+				.padding(start = 12.dp, bottom = 16.dp)
+				.height(28.dp),
 		) {
-			Box(
-				Modifier
-					.size(26.dp)
-					.clip(RoundedCornerShape(7.dp))
-					.background(CleanColors.Accent)
-			)
 			if (state.hasFocus) {
-				Spacer(Modifier.width(12.dp))
-				Text("Jellyfin", color = CleanColors.Text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+				Image(
+					painter = painterResource(R.drawable.app_logo),
+					contentDescription = "Jellyfin",
+					modifier = Modifier.height(26.dp),
+				)
+			} else {
+				Icon(
+					painter = painterResource(R.drawable.ic_jellyfin),
+					contentDescription = "Jellyfin",
+					tint = CleanColors.Accent,
+					modifier = Modifier.size(24.dp),
+				)
 			}
 		}
 
@@ -160,7 +169,7 @@ fun NavRail(
 			modifier = Modifier
 				.weight(1f)
 				.verticalScroll(rememberScrollState()),
-			verticalArrangement = Arrangement.spacedBy(6.dp),
+			verticalArrangement = Arrangement.spacedBy(2.dp),
 		) {
 			RailItem(
 				icon = painterResource(R.drawable.ic_house),
@@ -240,20 +249,20 @@ private fun RailItem(
 		verticalAlignment = Alignment.CenterVertically,
 		modifier = Modifier
 			.fillMaxWidth()
-			.height(48.dp)
-			.clip(RoundedCornerShape(12.dp))
+			.height(38.dp)
+			.clip(RoundedCornerShape(10.dp))
 			.background(background)
 			.onFocusChanged { focused = it.isFocused }
 			.clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 			.padding(horizontal = 14.dp),
 	) {
-		Icon(painter = icon, contentDescription = if (expanded) null else label, tint = content, modifier = Modifier.size(22.dp))
+		Icon(painter = icon, contentDescription = if (expanded) null else label, tint = content, modifier = Modifier.size(18.dp))
 		if (expanded) {
-			Spacer(Modifier.width(14.dp))
+			Spacer(Modifier.width(12.dp))
 			Text(
 				text = label,
 				color = content,
-				fontSize = 17.sp,
+				fontSize = 14.sp,
 				fontWeight = if (selected || focused) FontWeight.SemiBold else FontWeight.Medium,
 				maxLines = 1,
 				overflow = TextOverflow.Ellipsis,

@@ -67,7 +67,7 @@ class AlphaJumpStrip @JvmOverloads constructor(
 			button.setTextColor(
 				when {
 					button.isFocused -> Color.parseColor("#0B0B0D")
-					button.tag == current -> Color.parseColor("#3DD6C4")
+					button.tag == current -> Color.parseColor("#AA5CC3")
 					else -> Color.parseColor("#A1A1A6")
 				}
 			)
