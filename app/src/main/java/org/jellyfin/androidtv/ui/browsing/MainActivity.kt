@@ -174,35 +174,57 @@ class MainActivity : FragmentActivity() {
 		}
 	}
 
-	// Left at the left edge of the content moves into the menu. Only for classic views (the old
-	// leanback screens); Compose screens move focus themselves and report the root view here.
+	// Left in the old leanback screens (Home rows, library grids) is handled here, before Compose
+	// sees it: Compose would jump straight to the menu whenever the card on the left is scrolled off
+	// screen. Move to the card on the left if there is one, otherwise open the menu.
 	override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-		if (event.keyCode != KeyEvent.KEYCODE_DPAD_LEFT || event.action != KeyEvent.ACTION_DOWN
-			|| !navRailState.visible || navRailState.hasFocus) return super.dispatchKeyEvent(event)
-
-		val before = currentFocus
-		// Not at the left edge yet (e.g. part-way along a Home row): let Left scroll back first
-		if (before != null && !isAtLeftEdge(before)) return super.dispatchKeyEvent(event)
-		val handled = super.dispatchKeyEvent(event)
-		if (before != null && before !is AbstractComposeView && before::class.java.name != COMPOSE_ROOT_VIEW
-			&& currentFocus === before && navRailState.requestFocus()) return true
-		return handled
+		if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN
+			&& navRailState.visible && !navRailState.hasFocus) {
+			val focused = currentFocus
+			if (focused != null && focused !is AbstractComposeView && focused::class.java.name != COMPOSE_ROOT_VIEW) {
+				when (moveLeftInGrid(focused)) {
+					true -> return true
+					false -> if (navRailState.requestFocus()) return true
+					null -> Unit
+				}
+			}
+		}
+		return super.dispatchKeyEvent(event)
 	}
 
-	/**
-	 * Whether Left from [focused] has nowhere to go inside the content. Leanback rows move focus
-	 * after the key event, so check their selected position instead of watching the focus.
-	 */
-	private fun isAtLeftEdge(focused: View): Boolean {
+	/** true = moved to the item on the left, false = already at the grid's left edge, null = not in a leanback grid. */
+	private fun moveLeftInGrid(focused: View): Boolean? {
 		var view: View? = focused
 		while (view != null) {
 			when (view) {
-				is HorizontalGridView -> return view.selectedPosition <= 0
-				is VerticalGridView -> return FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT) == null
+				is HorizontalGridView -> {
+					FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT)?.let { return it.requestFocus(View.FOCUS_LEFT) }
+					if (view.canScrollHorizontally(-1) && view.selectedPosition > 0) {
+						view.setSelectedPositionSmooth(view.selectedPosition - 1)
+						return true
+					}
+					return false
+				}
+
+				is VerticalGridView -> {
+					FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT)?.let { return it.requestFocus(View.FOCUS_LEFT) }
+					return false
+				}
 			}
 			view = view.parent as? View
 		}
-		return true
+
+		// Other classic views (A–Z strip, toolbars): look for something to the left within the screen
+		var screen: View = focused
+		while (true) {
+			val parent = screen.parent as? View ?: break
+			if (parent is AbstractComposeView || parent::class.java.name.startsWith("androidx.compose.ui")) break
+			screen = parent
+		}
+		if (screen === focused) return null
+		FocusFinder.getInstance().findNextFocus(screen as? android.view.ViewGroup ?: return null, focused, View.FOCUS_LEFT)
+			?.let { return it.requestFocus(View.FOCUS_LEFT) }
+		return false
 	}
 
 	// Forward key events to fragments
