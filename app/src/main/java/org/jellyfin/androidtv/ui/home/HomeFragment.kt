@@ -6,6 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -38,14 +44,24 @@ class HomeFragment : Fragment() {
 		val rowsFocusRequester = remember { FocusRequester() }
 		LaunchedEffect(rowsFocusRequester) { rowsFocusRequester.requestFocus() }
 
-		// The menu on the left replaces the toolbar that used to sit above the rows
-		AndroidFragment<HomeRowsFragment>(
-			modifier = Modifier
-				.focusGroup()
-				.focusRequester(rowsFocusRequester)
-				.fillMaxSize(),
-			maxLifecycle = Lifecycle.State.RESUMED,
-		)
+		// The menu on the left replaces the toolbar; an info panel for the selected item sits above the rows
+		val selected by HomeSelection.item.collectAsState()
+		Column(Modifier.fillMaxSize()) {
+			HomeInfoHeader(
+				item = selected,
+				modifier = Modifier
+					.fillMaxWidth()
+					.height(200.dp),
+			)
+			AndroidFragment<HomeRowsFragment>(
+				modifier = Modifier
+					.focusGroup()
+					.focusRequester(rowsFocusRequester)
+					.fillMaxWidth()
+					.weight(1f),
+				maxLifecycle = Lifecycle.State.RESUMED,
+			)
+		}
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

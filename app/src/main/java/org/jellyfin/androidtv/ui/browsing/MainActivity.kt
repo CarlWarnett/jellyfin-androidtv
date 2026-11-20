@@ -8,8 +8,12 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import org.jellyfin.androidtv.ui.shared.rail.NAV_RAIL_COLLAPSED_WIDTH
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -89,14 +93,22 @@ class MainActivity : FragmentActivity() {
 					interactionTracker = { interactionTrackerViewModel.notifyInteraction(false, userInitiated = true) }
 				) {
 					AppBackground()
-					Row(Modifier.fillMaxSize()) {
-						NavRail(state = navRailState)
+					// The menu floats over the content (like Plex), so opening it doesn't move anything
+					Box(Modifier.fillMaxSize()) {
 						AppNavigationHost(
 							navigationRepository = navigationRepository,
 							modifier = Modifier
-								.weight(1f)
-								.fillMaxHeight(),
+								.fillMaxSize()
+								.padding(start = if (navRailState.visible) NAV_RAIL_COLLAPSED_WIDTH else 0.dp),
 						)
+						if (navRailState.hasFocus) {
+							Box(
+								Modifier
+									.fillMaxSize()
+									.background(Color.Black.copy(alpha = 0.55f))
+							)
+						}
+						NavRail(state = navRailState)
 					}
 
 					// Back: from a main screen's content go to the menu; on the Home menu ask before exiting.

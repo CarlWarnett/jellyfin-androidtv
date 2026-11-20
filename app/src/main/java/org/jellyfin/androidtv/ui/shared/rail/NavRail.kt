@@ -92,8 +92,10 @@ class NavRailState {
 	fun requestFocus() = runCatching { focusRequester.requestFocus() }.isSuccess
 }
 
-private val COLLAPSED_WIDTH = 84.dp
-private val EXPANDED_WIDTH = 240.dp
+/** Width the content leaves free for the closed menu. */
+val NAV_RAIL_COLLAPSED_WIDTH = 72.dp
+private val COLLAPSED_WIDTH = NAV_RAIL_COLLAPSED_WIDTH
+private val EXPANDED_WIDTH = 260.dp
 
 /**
  * The menu down the left-hand side: Home, Search, each library, then Settings and Switch user.
@@ -122,12 +124,15 @@ fun NavRail(
 	val selected = destination?.selectedKey()
 	state.onTopLevelScreen = selected != null
 
+	// Closed: a thin strip of icons. Open: a rounded panel floating over the (dimmed) content.
 	Column(
 		modifier = modifier
 			.fillMaxHeight()
+			.padding(if (state.hasFocus) 16.dp else 0.dp)
 			.width(width)
-			.background(CleanColors.Rail)
-			.padding(horizontal = 14.dp, vertical = 28.dp)
+			.clip(RoundedCornerShape(if (state.hasFocus) 18.dp else 0.dp))
+			.background(if (state.hasFocus) CleanColors.Rail else Color.Transparent)
+			.padding(horizontal = 12.dp, vertical = 24.dp)
 			.focusRequester(state.focusRequester)
 			.focusRestorer()
 			.onFocusChanged { state.hasFocus = it.hasFocus }
