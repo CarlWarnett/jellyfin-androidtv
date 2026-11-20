@@ -180,9 +180,13 @@ class MainActivity : FragmentActivity() {
 	override fun dispatchKeyEvent(event: KeyEvent): Boolean {
 		if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN
 			&& navRailState.visible && !navRailState.hasFocus) {
+			// Cards are small Compose views inside the leanback rows, so look for a grid above the
+			// focused view whatever kind of view it is.
 			val focused = currentFocus
-			if (focused != null && focused !is AbstractComposeView && focused::class.java.name != COMPOSE_ROOT_VIEW) {
-				when (moveLeftInGrid(focused)) {
+			if (focused != null) {
+				val result = moveLeftInGrid(focused)
+				Timber.d("Left from %s: %s", focused::class.java.simpleName, when (result) { true -> "moved"; false -> "menu"; null -> "not a grid" })
+				when (result) {
 					true -> return true
 					false -> if (navRailState.requestFocus()) return true
 					null -> Unit
@@ -223,7 +227,9 @@ class MainActivity : FragmentActivity() {
 			view = view.parent as? View
 		}
 
-		// Other classic views (A–Z strip, toolbars): look for something to the left within the screen
+		// Other classic views (A–Z strip, toolbars): look for something to the left within the screen.
+		// Compose screens move focus themselves.
+		if (focused is AbstractComposeView || focused::class.java.name == COMPOSE_ROOT_VIEW) return null
 		var screen: View = focused
 		while (true) {
 			val parent = screen.parent as? View ?: break
