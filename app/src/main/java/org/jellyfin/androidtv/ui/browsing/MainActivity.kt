@@ -49,7 +49,9 @@ import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.ProvideLocalInteractionTracker
 import org.jellyfin.androidtv.ui.composable.compat.AppNavigationHost
+import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.navigation.UpNavigation
 import org.jellyfin.androidtv.ui.screensaver.InAppScreensaver
 import org.jellyfin.androidtv.ui.settings.compat.MainActivitySettings
 import org.jellyfin.androidtv.ui.startup.StartupActivity
@@ -67,6 +69,7 @@ class MainActivity : FragmentActivity() {
 	private val interactionTrackerViewModel by viewModel<InteractionTrackerViewModel>()
 	private val workManager by inject<WorkManager>()
 	private val navRailState = NavRailState()
+	private val upNavigation by inject<UpNavigation>()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		applyTheme()
@@ -124,7 +127,21 @@ class MainActivity : FragmentActivity() {
 					BackHandler(enabled = navRailState.visible && navRailState.hasFocus) {
 						focusManager.moveFocus(FocusDirection.Right)
 					}
-					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && !canGoBack) {
+					// Details, season and library screens: Back goes up a level (episode → season → series →
+					// library → Home; movie → library → Home), not back along the path you took
+					val currentDestination by navigationRepository.currentDestination.collectAsState()
+					val upHandled = upNavigation.handles(currentDestination)
+					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && upHandled) {
+						val destination = currentDestination ?: return@BackHandler
+						lifecycleScope.launch {
+							when (val target = upNavigation.parentOf(destination)) {
+								UpNavigation.Target.Home -> navigationRepository.reset(Destinations.home, clearHistory = true)
+								is UpNavigation.Target.Screen -> navigationRepository.navigate(target.destination, replace = true)
+								UpNavigation.Target.Default -> if (!navigationRepository.goBack()) showExit = true
+							}
+						}
+					}
+					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && !upHandled && !canGoBack) {
 						showExit = true
 					}
 					ExitDialog(

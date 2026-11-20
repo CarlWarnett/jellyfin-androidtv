@@ -33,6 +33,7 @@ import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.navigation.NavigationRepositoryImpl
+import org.jellyfin.androidtv.ui.navigation.UpNavigation
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer
 import org.jellyfin.androidtv.ui.playback.external.DefaultExternalPlayerApi
 import org.jellyfin.androidtv.ui.playback.external.ExternalPlayerApi
@@ -147,6 +148,7 @@ val appModule = module {
 	single<ItemMutationRepository> { ItemMutationRepositoryImpl(get(), get()) }
 	single<CustomMessageRepository> { CustomMessageRepositoryImpl() }
 	single<NavigationRepository> { NavigationRepositoryImpl(Destinations.home) }
+	single { UpNavigation(get(), get()) }
 	single<SearchRepository> { SearchRepositoryImpl(get()) }
 	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get()) }
 	single<ExternalAppRepository> { ExternalAppRepository(get(), getAll(), get<DefaultExternalPlayerApi>()) }
