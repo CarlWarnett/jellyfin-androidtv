@@ -10,11 +10,10 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
-import org.jellyfin.androidtv.R
 
 /**
- * Always-visible A–Z strip down the right of a library. Picking a letter shows only titles starting
- * with it ("All" shows everything again), so the bottom of a long library is a couple of presses away.
+ * A–Z strip down the right of a library sorted by name. Only letters that have titles are shown;
+ * picking one scrolls the library to where that letter starts (nothing is filtered out).
  */
 class AlphaJumpStrip @JvmOverloads constructor(
 	context: Context,
@@ -23,15 +22,21 @@ class AlphaJumpStrip @JvmOverloads constructor(
 	var onLetterSelected: (letter: String) -> Unit = {}
 
 	private val buttons = mutableListOf<TextView>()
+	private var current: String? = null
 
 	init {
 		orientation = VERTICAL
 		gravity = Gravity.CENTER_HORIZONTAL
+	}
 
-		val letters = listOf("#") + resources.getString(R.string.byletter_letters).map { it.toString() }
+	/** Shows one button per letter, in the given order ("#" = digits and symbols). */
+	fun setLetters(letters: Collection<String>) {
+		val hadFocus = hasFocus()
+		removeAllViews()
+		buttons.clear()
 		for (letter in letters) {
 			val button = TextView(context).apply {
-				text = if (letter == "#") "All" else letter
+				text = letter
 				tag = letter
 				gravity = Gravity.CENTER
 				setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
@@ -39,31 +44,30 @@ class AlphaJumpStrip @JvmOverloads constructor(
 				isFocusable = true
 				isClickable = true
 				background = pill()
+				contentDescription = if (letter == "#") "Numbers and symbols" else letter
 				setOnClickListener { onLetterSelected(letter) }
 				setOnFocusChangeListener { _, _ -> updateColors() }
 			}
 			buttons += button
 			addView(button, LayoutParams(dp(34), dp(15)))
 		}
-		setSelected(null)
+		updateColors()
+		if (hadFocus) buttons.firstOrNull { it.tag == current }?.requestFocus() ?: buttons.firstOrNull()?.requestFocus()
 	}
 
-	private var current: String? = null
-
-	/** Marks the active letter (null or "#" = All). */
+	/** Highlights the letter of the section the grid is in. */
 	fun setSelected(letter: String?) {
-		current = letter?.takeIf { it.isNotEmpty() } ?: "#"
+		if (letter == current) return
+		current = letter
 		updateColors()
 	}
 
 	private fun updateColors() {
 		for (button in buttons) {
-			val active = button.tag == current
-			button.isActivated = active
 			button.setTextColor(
 				when {
 					button.isFocused -> Color.parseColor("#0B0B0D")
-					active -> Color.parseColor("#3DD6C4")
+					button.tag == current -> Color.parseColor("#3DD6C4")
 					else -> Color.parseColor("#A1A1A6")
 				}
 			)

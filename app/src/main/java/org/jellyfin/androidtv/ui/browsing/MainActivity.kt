@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.browsing
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.FocusFinder
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -22,6 +23,8 @@ import org.jellyfin.androidtv.ui.shared.rail.ExitDialog
 import org.jellyfin.androidtv.ui.shared.rail.NavRail
 import org.jellyfin.androidtv.ui.shared.rail.NavRailState
 import androidx.fragment.app.Fragment
+import androidx.leanback.widget.HorizontalGridView
+import androidx.leanback.widget.VerticalGridView
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -166,10 +169,28 @@ class MainActivity : FragmentActivity() {
 			|| !navRailState.visible || navRailState.hasFocus) return super.dispatchKeyEvent(event)
 
 		val before = currentFocus
+		// Not at the left edge yet (e.g. part-way along a Home row): let Left scroll back first
+		if (before != null && !isAtLeftEdge(before)) return super.dispatchKeyEvent(event)
 		val handled = super.dispatchKeyEvent(event)
 		if (before != null && before !is AbstractComposeView && before::class.java.name != COMPOSE_ROOT_VIEW
 			&& currentFocus === before && navRailState.requestFocus()) return true
 		return handled
+	}
+
+	/**
+	 * Whether Left from [focused] has nowhere to go inside the content. Leanback rows move focus
+	 * after the key event, so check their selected position instead of watching the focus.
+	 */
+	private fun isAtLeftEdge(focused: View): Boolean {
+		var view: View? = focused
+		while (view != null) {
+			when (view) {
+				is HorizontalGridView -> return view.selectedPosition <= 0
+				is VerticalGridView -> return FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT) == null
+			}
+			view = view.parent as? View
+		}
+		return true
 	}
 
 	// Forward key events to fragments

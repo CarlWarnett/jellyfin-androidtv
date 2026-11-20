@@ -412,6 +412,11 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
         removeRow();
     }
 
+    /** The items query as it is sent (with sort and filters), or null for artist and other queries. */
+    public @Nullable GetItemsRequest getItemsQuery() {
+        return queryType == QueryType.Items ? mQuery : null;
+    }
+
     public @Nullable String getStartLetter() {
         switch (queryType) {
             case Artists:

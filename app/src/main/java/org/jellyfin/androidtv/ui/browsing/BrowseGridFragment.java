@@ -64,6 +64,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.CollectionType;
 import org.jellyfin.sdk.model.api.ItemSortBy;
 import org.jellyfin.sdk.model.api.SortOrder;
+import org.jellyfin.sdk.model.api.request.GetItemsRequest;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -675,7 +676,12 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                     setItem(null);
                     updateCounter(mAdapter.getTotalItems() > 0 ? 1 : 0);
                 }
-                mLetterButton.setVisibility(ItemSortBy.SORT_NAME.equals(mAdapter.getSortBy()) ? View.VISIBLE : View.GONE);
+                // The A–Z strip replaces the letter button
+                mLetterButton.setVisibility(View.GONE);
+                if (mAlphaIndexStale) {
+                    mAlphaIndexStale = false;
+                    updateAlphaIndex();
+                }
                 if (mAdapter.getItemsLoaded() == 0) {
                     binding.toolBar.requestFocus();
                     mGridView.setFocusable(false);
@@ -702,6 +708,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         }
 
         mAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
+        mAlphaIndexStale = true;
         mAdapter.Retrieve();
     }
 
@@ -815,13 +822,11 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mLetterButton.setContentDescription(getString(R.string.lbl_by_letter));
         binding.toolBar.addView(mLetterButton);
 
-        // Always-visible A–Z strip on the right (same filter as the letter button's popup)
-        binding.alphaJump.setSelected(mAdapter != null ? mAdapter.getStartLetter() : null);
+        // A–Z strip on the right: scrolls to where a letter starts (see updateAlphaIndex)
+        binding.alphaJump.setVisibility(View.GONE);
         binding.alphaJump.setOnLetterSelected(letter -> {
-            if (mAdapter == null) return null;
-            mAdapter.setStartLetter(letter);
-            binding.alphaJump.setSelected(letter);
-            loadGrid();
+            Integer position = mAlphaIndex.get(letter);
+            if (position != null) jumpToPosition(position, 0);
             return null;
         });
 
@@ -843,6 +848,45 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         }
     }
 
+    private Map<String, Integer> mAlphaIndex = new HashMap<>();
+    private int mAlphaIndexRequest = 0;
+    private boolean mAlphaIndexStale = true;
+
+    /** Loads where each letter starts when the grid is sorted by name, and shows only those letters. */
+    private void updateAlphaIndex() {
+        GetItemsRequest query = mAdapter != null ? mAdapter.getItemsQuery() : null;
+        boolean byName = mAdapter != null && ItemSortBy.SORT_NAME.equals(mAdapter.getSortBy())
+                && SortOrder.ASCENDING.equals(getSortOption(mAdapter.getSortBy()).order)
+                && (mAdapter.getStartLetter() == null || mAdapter.getStartLetter().isEmpty());
+        if (query == null || !byName || mAdapter.getTotalItems() < 20) {
+            mAlphaIndex = new HashMap<>();
+            binding.alphaJump.setVisibility(View.GONE);
+            return;
+        }
+        int request = ++mAlphaIndexRequest;
+        BrowseGridFragmentHelperKt.loadAlphaIndex(this, api.getValue(), query, index -> {
+            if (request != mAlphaIndexRequest || !isAdded()) return null;
+            mAlphaIndex = index;
+            binding.alphaJump.setLetters(index.keySet());
+            binding.alphaJump.setVisibility(index.size() > 1 ? View.VISIBLE : View.GONE);
+            if (mGridView != null) binding.alphaJump.setSelected(BrowseGridFragmentHelperKt.alphaKeyAt(index, mGridView.getSelectedPosition()));
+            return null;
+        });
+    }
+
+    /** Scrolls the grid to [position], loading more of the library first if it isn't loaded yet. */
+    private void jumpToPosition(int position, int attempt) {
+        if (mAdapter == null || mGridView == null || !isAdded()) return;
+        if (position < mAdapter.getItemsLoaded()) {
+            mGridView.setSelectedPosition(position);
+            binding.alphaJump.setSelected(BrowseGridFragmentHelperKt.alphaKeyAt(mAlphaIndex, position));
+            return;
+        }
+        if (attempt > 100) return; // give up after ~15 seconds
+        mAdapter.loadMoreItemsIfNeeded(mAdapter.getItemsLoaded());
+        mHandler.postDelayed(() -> jumpToPosition(position, attempt + 1), 150);
+    }
+
     class JumplistPopup {
         private final int WIDTH = Utils.convertDpToPixel(requireContext(), 900);
         private final int HEIGHT = Utils.convertDpToPixel(requireContext(), 55);
@@ -859,7 +903,6 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             alphaPicker = new AlphaPickerView(requireContext(), null);
             alphaPicker.setOnAlphaSelected(letter -> {
                 mAdapter.setStartLetter(letter.toString());
-                binding.alphaJump.setSelected(letter.toString());
                 loadGrid();
                 dismiss();
                 return null;
@@ -953,6 +996,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
                 if (!determiningPosterSize)
                     mAdapter.loadMoreItemsIfNeeded(mAdapter.indexOf(mCurrentItem));
+                if (!mAlphaIndex.isEmpty())
+                    binding.alphaJump.setSelected(BrowseGridFragmentHelperKt.alphaKeyAt(mAlphaIndex, mAdapter.indexOf(mCurrentItem)));
             }
         }
     }
