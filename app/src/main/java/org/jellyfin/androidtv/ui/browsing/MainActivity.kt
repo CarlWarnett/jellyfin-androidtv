@@ -192,23 +192,32 @@ class MainActivity : FragmentActivity() {
 		return super.dispatchKeyEvent(event)
 	}
 
+	/** How many laid-out children line up with the first one on [edge] (rows or columns of a grid). */
+	private fun android.view.ViewGroup.alignedChildCount(edge: (View) -> Int): Int {
+		val first = getChildAt(0) ?: return 1
+		return (0 until childCount).count { edge(getChildAt(it)) == edge(first) }.coerceAtLeast(1)
+	}
+
 	/** true = moved to the item on the left, false = already at the grid's left edge, null = not in a leanback grid. */
 	private fun moveLeftInGrid(focused: View): Boolean? {
 		var view: View? = focused
 		while (view != null) {
 			when (view) {
+				// Leanback grids only expose the selected card to focus search, so use positions:
+				// rows/columns are counted from the laid-out cards that line up with the first one.
 				is HorizontalGridView -> {
-					FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT)?.let { return it.requestFocus(View.FOCUS_LEFT) }
-					if (view.canScrollHorizontally(-1) && view.selectedPosition > 0) {
-						view.setSelectedPositionSmooth(view.selectedPosition - 1)
-						return true
-					}
-					return false
+					val rows = view.alignedChildCount { it.left }
+					val target = view.selectedPosition - rows
+					if (target < 0) return false
+					view.setSelectedPositionSmooth(target)
+					return true
 				}
 
 				is VerticalGridView -> {
-					FocusFinder.getInstance().findNextFocus(view, focused, View.FOCUS_LEFT)?.let { return it.requestFocus(View.FOCUS_LEFT) }
-					return false
+					val columns = view.alignedChildCount { it.top }
+					if (view.selectedPosition % columns == 0) return false
+					view.setSelectedPositionSmooth(view.selectedPosition - 1)
+					return true
 				}
 			}
 			view = view.parent as? View
