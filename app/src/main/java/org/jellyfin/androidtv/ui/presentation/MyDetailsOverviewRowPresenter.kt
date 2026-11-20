@@ -24,14 +24,10 @@ class MyDetailsOverviewRowPresenter(
 			InfoLayoutHelper.addInfoRow(view.context, row.item, row.item.mediaSources?.getOrNull(row.selectedMediaSourceIndex), binding.fdMainInfoRow, false)
 			binding.fdGenreRow.text = row.item.genres?.joinToString(" / ")
 
-			binding.infoTitle1.text = row.infoItem1?.label
-			binding.infoValue1.text = row.infoItem1?.value
-
-			binding.infoTitle2.text = row.infoItem2?.label
-			binding.infoValue2.text = row.infoItem2?.value
-
-			binding.infoTitle3.text = row.infoItem3?.label
-			binding.infoValue3.text = row.infoItem3?.value
+			infoItems[0] = row.infoItem1?.label to row.infoItem1?.value
+			infoItems[1] = row.infoItem2?.label to row.infoItem2?.value
+			infoItems[2] = row.infoItem3?.label to row.infoItem3?.value
+			renderExtraInfo()
 
 			binding.mainImage.load(row.imageDrawable, null, null, 1.0, 0)
 
@@ -60,7 +56,28 @@ class MyDetailsOverviewRowPresenter(
 		}
 
 		fun setInfoValue3(text: String?) {
-			binding.infoValue3.text = text
+			infoItems[2] = infoItems[2]?.first to text
+			renderExtraInfo()
+		}
+
+		// Directed by / Seasons / Runs / Ends as one line under the synopsis; empty ones are left out
+		private val infoItems = arrayOfNulls<Pair<String?, String?>>(3)
+
+		private fun renderExtraInfo() {
+			val text = android.text.SpannableStringBuilder()
+			for ((label, value) in infoItems.filterNotNull()) {
+				if (label.isNullOrBlank() || value.isNullOrBlank()) continue
+				if (text.isNotEmpty()) text.append("      ")
+				val start = text.length
+				text.append(label.uppercase())
+				text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, text.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+				text.append("  ")
+				val valueStart = text.length
+				text.append(value)
+				text.setSpan(android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()), valueStart, text.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+			}
+			binding.fdExtraInfo.text = text
+			binding.fdExtraInfo.isVisible = text.isNotEmpty()
 		}
 	}
 

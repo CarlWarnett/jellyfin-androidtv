@@ -17,41 +17,6 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
 import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.jellyfin.androidtv.ui.navigation.ProvideRouter
-import org.jellyfin.androidtv.ui.settings.Routes
-import org.jellyfin.androidtv.ui.settings.composable.SettingsDialog
-import org.jellyfin.androidtv.ui.settings.composable.SettingsRouterContent
-import org.jellyfin.androidtv.ui.settings.routes
-import java.util.UUID
-
-fun BrowseGridFragment.createSettingsVisibility() = MutableStateFlow(false)
-
-fun BrowseGridFragment.addSettings(
-	view: ComposeView,
-	itemId: UUID,
-	displayPreferencesId: String,
-	visible: MutableStateFlow<Boolean>,
-) {
-	view.setContent {
-		val isVisible by visible.collectAsState(false)
-
-		ProvideRouter(
-			routes,
-			Routes.LIBRARIES_DISPLAY,
-			mapOf("itemId" to itemId.toString(), "displayPreferencesId" to displayPreferencesId)
-		) {
-			SettingsDialog(
-				visible = isVisible,
-				onDismissRequest = {
-					visible.value = false
-					onResume()
-				}
-			) {
-				SettingsRouterContent()
-			}
-		}
-	}
-}
 
 /**
  * Works out, for a library sorted by name, where each letter starts: one light request for the

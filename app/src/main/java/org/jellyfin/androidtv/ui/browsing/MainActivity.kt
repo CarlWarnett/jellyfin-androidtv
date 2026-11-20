@@ -21,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.AbstractComposeView
 import kotlinx.coroutines.flow.map
 import org.jellyfin.androidtv.ui.shared.rail.ExitDialog
@@ -111,16 +113,18 @@ class MainActivity : FragmentActivity() {
 						NavRail(state = navRailState)
 					}
 
-					// Back: from a main screen's content go to the menu; on the Home menu ask before exiting.
+					// Back goes up a level at a time until Home, and on Home asks before exiting. It never
+					// opens the menu (Left at the far edge does that); with the menu open it just closes it.
 					// Registered after AppNavigationHost, so these win over its "go back" handler when enabled.
 					val canGoBack by remember {
 						navigationRepository.currentDestination.map { navigationRepository.canGoBack }
 					}.collectAsState(navigationRepository.canGoBack)
 					var showExit by remember { mutableStateOf(false) }
-					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && navRailState.onTopLevelScreen) {
-						if (!navRailState.requestFocus()) navigationRepository.goBack()
+					val focusManager = LocalFocusManager.current
+					BackHandler(enabled = navRailState.visible && navRailState.hasFocus) {
+						focusManager.moveFocus(FocusDirection.Right)
 					}
-					BackHandler(enabled = navRailState.visible && navRailState.hasFocus && !canGoBack) {
+					BackHandler(enabled = navRailState.visible && !navRailState.hasFocus && !canGoBack) {
 						showExit = true
 					}
 					ExitDialog(

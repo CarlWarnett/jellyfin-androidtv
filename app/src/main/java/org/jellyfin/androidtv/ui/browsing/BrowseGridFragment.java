@@ -150,7 +150,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mainTitle = mFolder.getName();
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
-        mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
+        // One look for every library: posters, sorted by name, no filters
+        mImageType = ImageType.POSTER;
         // Always a vertically scrolling grid of large posters
         mGridDirection = GridDirection.VERTICAL;
         mCardFocusScale = getResources().getFraction(R.fraction.card_scale_focus, 1, 1);
@@ -581,8 +582,9 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         super.onResume();
 
         PosterSize posterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
-        ImageType imageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
-        GridDirection gridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
+        // Fixed look: posters in a vertical grid (saved library settings are ignored)
+        ImageType imageType = ImageType.POSTER;
+        GridDirection gridDirection = GridDirection.VERTICAL;
 
         if (mImageType != imageType || mPosterSizeSetting != posterSizeSetting || mGridDirection != gridDirection || mDirty) {
             determiningPosterSize = true;
@@ -670,8 +672,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mDirty = false;
 
         FilterOptions filters = new FilterOptions();
-        filters.setFavoriteOnly(libraryPreferences.get(LibraryPreferences.Companion.getFilterFavoritesOnly()));
-        filters.setUnwatchedOnly(libraryPreferences.get(LibraryPreferences.Companion.getFilterUnwatchedOnly()));
+        filters.setFavoriteOnly(false);
+        filters.setUnwatchedOnly(false);
 
         mAdapter.setRetrieveFinishedListener(new EmptyResponse(getLifecycle()) {
             @Override
@@ -682,8 +684,6 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                     setItem(null);
                     updateCounter(mAdapter.getTotalItems() > 0 ? 1 : 0);
                 }
-                // The A–Z strip replaces the letter button
-                mLetterButton.setVisibility(View.GONE);
                 if (mAlphaIndexStale) {
                     mAlphaIndexStale = false;
                     updateAlphaIndex();
@@ -713,120 +713,14 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             buildAdapter();
         }
 
-        mAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
+        mAdapter.setSortBy(getSortOption(ItemSortBy.SORT_NAME));
         mAlphaIndexStale = true;
         mAdapter.Retrieve();
     }
 
-    private ImageButton mSortButton;
-    private ImageButton mSettingsButton;
-    private ImageButton mUnwatchedButton;
-    private ImageButton mFavoriteButton;
-    private ImageButton mLetterButton;
-
-    private void updateDisplayPrefs() {
-        CoroutineUtils.runOnLifecycle(getLifecycle(), (coroutineScope, continuation) -> {
-            libraryPreferences.set(LibraryPreferences.Companion.getFilterFavoritesOnly(), mAdapter.getFilters().isFavoriteOnly());
-            libraryPreferences.set(LibraryPreferences.Companion.getFilterUnwatchedOnly(), mAdapter.getFilters().isUnwatchedOnly());
-            libraryPreferences.set(LibraryPreferences.Companion.getSortBy(), mAdapter.getSortBy());
-            libraryPreferences.set(LibraryPreferences.Companion.getSortOrder(), getSortOption(mAdapter.getSortBy()).order);
-            return libraryPreferences.commit(continuation);
-        });
-    }
-
+    // The library has no toolbar: the menu on the left and the A–Z strip replace the old
+    // sort/filter/letter/settings buttons. Sort and filters stay as last saved in the library preferences.
     private void addTools() {
-        //Add tools
-        int size = Utils.convertDpToPixel(requireContext(), 26);
-
-        mSortButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
-        mSortButton.setImageResource(R.drawable.ic_sort);
-        mSortButton.setMaxHeight(size);
-        mSortButton.setAdjustViewBounds(true);
-        mSortButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //Create sort menu
-                PopupMenu sortMenu = new PopupMenu(getActivity(), binding.toolBar, Gravity.END);
-                for (Map.Entry<Integer, SortOption> entry : sortOptions.entrySet()) {
-                    MenuItem item = sortMenu.getMenu().add(0, entry.getKey(), entry.getKey(), entry.getValue().name);
-                    item.setChecked(entry.getValue().value.equals(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
-                }
-                sortMenu.getMenu().setGroupCheckable(0, true, true);
-                sortMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        mAdapter.setSortBy(Objects.requireNonNull(sortOptions.get(item.getItemId())));
-                        mAdapter.Retrieve();
-                        item.setChecked(true);
-                        updateDisplayPrefs();
-                        return true;
-                    }
-                });
-                sortMenu.show();
-            }
-        });
-        mSortButton.setContentDescription(getString(R.string.lbl_sort_by));
-
-        binding.toolBar.addView(mSortButton);
-
-        if (mRowDef.getQueryType() == QueryType.Items) {
-            mUnwatchedButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
-            mUnwatchedButton.setImageResource(R.drawable.ic_unwatch);
-            mUnwatchedButton.setActivated(mAdapter.getFilters().isUnwatchedOnly());
-            mUnwatchedButton.setMaxHeight(size);
-            mUnwatchedButton.setAdjustViewBounds(true);
-            mUnwatchedButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    FilterOptions filters = mAdapter.getFilters();
-                    if (filters == null) filters = new FilterOptions();
-
-                    filters.setUnwatchedOnly(!filters.isUnwatchedOnly());
-                    mUnwatchedButton.setActivated(filters.isUnwatchedOnly());
-                    mAdapter.setFilters(filters);
-                    mAdapter.Retrieve();
-                    updateDisplayPrefs();
-                }
-            });
-            mUnwatchedButton.setContentDescription(getString(R.string.lbl_unwatched));
-            binding.toolBar.addView(mUnwatchedButton);
-        }
-
-        mFavoriteButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
-        mFavoriteButton.setImageResource(R.drawable.ic_heart);
-        mFavoriteButton.setActivated(mAdapter.getFilters().isFavoriteOnly());
-        mFavoriteButton.setMaxHeight(size);
-        mFavoriteButton.setAdjustViewBounds(true);
-        mFavoriteButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                FilterOptions filters = mAdapter.getFilters();
-                if (filters == null) filters = new FilterOptions();
-
-                filters.setFavoriteOnly(!filters.isFavoriteOnly());
-                mFavoriteButton.setActivated(filters.isFavoriteOnly());
-                mAdapter.setFilters(filters);
-                mAdapter.Retrieve();
-                updateDisplayPrefs();
-            }
-        });
-        mFavoriteButton.setContentDescription(getString(R.string.lbl_favorite));
-        binding.toolBar.addView(mFavoriteButton);
-
-        JumplistPopup jumplistPopup = new JumplistPopup();
-        mLetterButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
-        mLetterButton.setImageResource(R.drawable.ic_jump_letter);
-        mLetterButton.setMaxHeight(size);
-        mLetterButton.setAdjustViewBounds(true);
-        mLetterButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //Open letter jump popup
-                jumplistPopup.show();
-            }
-        });
-        mLetterButton.setContentDescription(getString(R.string.lbl_by_letter));
-        binding.toolBar.addView(mLetterButton);
         binding.toolBar.setVisibility(View.GONE);
 
         // A–Z strip on the right: scrolls to where a letter starts (see updateAlphaIndex)
@@ -836,23 +730,6 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             if (position != null) jumpToPosition(position, 0);
             return null;
         });
-
-        if (mFolder.getDisplayPreferencesId() != null) {
-            MutableStateFlow<Boolean> settingsVisible = BrowseGridFragmentHelperKt.createSettingsVisibility(BrowseGridFragment.this);
-            mSettingsButton = new ImageButton(requireContext(), null, 0, R.style.Button_Icon);
-            mSettingsButton.setImageResource(R.drawable.ic_settings);
-            mSettingsButton.setMaxHeight(size);
-            mSettingsButton.setAdjustViewBounds(true);
-            mSettingsButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    settingsVisible.setValue(true);
-                }
-            });
-            mSettingsButton.setContentDescription(getString(R.string.lbl_settings));
-            binding.toolBar.addView(mSettingsButton);
-            BrowseGridFragmentHelperKt.addSettings(BrowseGridFragment.this, binding.settings, mFolder.getId(), mFolder.getDisplayPreferencesId(), settingsVisible);
-        }
     }
 
     private final kotlinx.coroutines.flow.MutableStateFlow<org.jellyfin.sdk.model.api.BaseItemDto> selectedItem = kotlinx.coroutines.flow.StateFlowKt.MutableStateFlow(null);
@@ -893,44 +770,6 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         if (attempt > 100) return; // give up after ~15 seconds
         mAdapter.loadMoreItemsIfNeeded(mAdapter.getItemsLoaded());
         mHandler.postDelayed(() -> jumpToPosition(position, attempt + 1), 150);
-    }
-
-    class JumplistPopup {
-        private final int WIDTH = Utils.convertDpToPixel(requireContext(), 900);
-        private final int HEIGHT = Utils.convertDpToPixel(requireContext(), 55);
-
-        private final PopupWindow popupWindow;
-        private final AlphaPickerView alphaPicker;
-
-        JumplistPopup() {
-            PopupEmptyBinding layout = PopupEmptyBinding.inflate(getLayoutInflater(), binding.rowsFragment, false);
-            popupWindow = new PopupWindow(layout.emptyPopup, WIDTH, HEIGHT, true);
-            popupWindow.setOutsideTouchable(true);
-            popupWindow.setAnimationStyle(R.style.WindowAnimation_SlideTop);
-
-            alphaPicker = new AlphaPickerView(requireContext(), null);
-            alphaPicker.setOnAlphaSelected(letter -> {
-                mAdapter.setStartLetter(letter.toString());
-                loadGrid();
-                dismiss();
-                return null;
-            });
-
-            layout.emptyPopup.addView(alphaPicker);
-        }
-
-        public void show() {
-            popupWindow.showAtLocation(binding.rowsFragment, Gravity.TOP, binding.rowsFragment.getLeft(), binding.rowsFragment.getTop());
-            if (mAdapter.getStartLetter() != null && !mAdapter.getStartLetter().isEmpty()) {
-                alphaPicker.focus(mAdapter.getStartLetter().charAt(0));
-            }
-        }
-
-        public void dismiss() {
-            if (popupWindow != null && popupWindow.isShowing()) {
-                popupWindow.dismiss();
-            }
-        }
     }
 
     private void setupEventListeners() {

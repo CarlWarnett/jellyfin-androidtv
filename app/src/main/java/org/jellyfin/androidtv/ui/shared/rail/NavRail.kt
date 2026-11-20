@@ -88,9 +88,6 @@ class NavRailState {
 		internal set
 	var visible by mutableStateOf(true)
 		internal set
-	/** True on Home, Search and a library's main screen; Back there moves to the menu instead of going back. */
-	var onTopLevelScreen by mutableStateOf(true)
-		internal set
 
 	fun requestFocus() = runCatching { focusRequester.requestFocus() }.isSuccess
 }
@@ -125,7 +122,6 @@ fun NavRail(
 
 	val width by animateDpAsState(if (state.hasFocus) EXPANDED_WIDTH else COLLAPSED_WIDTH, label = "railWidth")
 	val selected = destination?.selectedKey()
-	state.onTopLevelScreen = selected != null
 
 	// Closed: a thin strip of icons. Open: a rounded panel floating over the (dimmed) content.
 	Column(
