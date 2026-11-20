@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/statusText"
-        android:layout_below="@+id/infoRow"
+        android:layout_below="@+id/infoHeader"
         android:layout_alignParentStart="true"
         android:layout_toStartOf="@+id/alphaJump"
         android:layout_marginTop="4dp"
@@ -25,8 +25,17 @@
         android:layout_marginTop="6dp"
         android:layout_marginEnd="12dp" />
 
+    <!-- Info panel for the selected item (same as Home) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/infoHeader"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:layout_alignParentTop="true"
+        android:layout_toStartOf="@+id/toolBar" />
+
     <TextView
         android:id="@+id/title"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
@@ -47,6 +56,7 @@
         android:layout_below="@+id/title"
         android:layout_alignStart="@+id/title"
         android:layout_marginTop="5sp"
+        android:visibility="gone"
         android:id="@+id/infoRow"
         android:layout_toStartOf="@+id/clock"/>
 
@@ -54,7 +64,7 @@
         android:id="@+id/toolBar"
         android:layout_width="250dp"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/title"
+        android:layout_below="@+id/clock"
         android:layout_alignParentEnd="true"
         android:layout_marginTop="4dp"
         android:layout_marginEnd="40dp"
@@ -92,7 +102,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/clock"
-        android:layout_alignTop="@+id/title"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="20sp"
         android:layout_marginEnd="40sp"
         android:layout_marginStart="8sp"
         android:layout_alignParentEnd="true" />

@@ -199,6 +199,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        BrowseGridFragmentHelperKt.setupInfoHeader(binding.infoHeader, selectedItem);
 
         createGrid();
         loadGrid();
@@ -848,6 +849,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         }
     }
 
+    private final kotlinx.coroutines.flow.MutableStateFlow<org.jellyfin.sdk.model.api.BaseItemDto> selectedItem = kotlinx.coroutines.flow.StateFlowKt.MutableStateFlow(null);
     private Map<String, Integer> mAlphaIndex = new HashMap<>();
     private int mAlphaIndexRequest = 0;
     private boolean mAlphaIndexStale = true;
@@ -983,6 +985,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
                                    RowPresenter.ViewHolder rowViewHolder, Row row) {
             mHandler.removeCallbacks(mDelayedSetItem);
+            selectedItem.setValue(item instanceof BaseRowItem ? ((BaseRowItem) item).getBaseItem() : null);
             if (!(item instanceof BaseRowItem)) {
                 mCurrentItem = null;
                 binding.title.setText(mainTitle);

@@ -2,7 +2,11 @@ package org.jellyfin.androidtv.ui.browsing
 
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import org.jellyfin.androidtv.ui.home.HomeInfoHeader
+import org.jellyfin.sdk.model.api.BaseItemDto
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -92,3 +96,11 @@ fun alphaKey(name: String?): String {
 /** The letter whose section contains [position]. */
 fun alphaKeyAt(index: Map<String, Int>, position: Int): String? =
 	index.entries.filter { it.value <= position }.maxByOrNull { it.value }?.key
+
+/** Shows the Home-style info panel for the selected item above the grid. */
+fun setupInfoHeader(view: ComposeView, selected: MutableStateFlow<BaseItemDto?>) {
+	view.setContent {
+		val item by selected.collectAsState()
+		HomeInfoHeader(item = item, modifier = Modifier.fillMaxSize())
+	}
+}
