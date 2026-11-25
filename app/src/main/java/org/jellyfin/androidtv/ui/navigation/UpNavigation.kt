@@ -37,6 +37,14 @@ class UpNavigation(
 		data object Default : Target
 	}
 
+	/** Whether two destinations show the same screen (same fragment and same item or library). */
+	fun sameScreen(a: Destination.Fragment, b: Destination.Fragment): Boolean {
+		if (a.fragment != b.fragment) return false
+		fun key(d: Destination.Fragment) = d.arguments.getString("ItemId")
+			?: d.arguments.getString(Extras.Folder)?.let { Regex("\"Id\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
+		return key(a) != null && key(a) == key(b)
+	}
+
 	/** Screens Back works on as "up a level". */
 	fun handles(destination: Destination.Fragment?): Boolean = destination?.fragment in setOf(
 		FullDetailsFragment::class,

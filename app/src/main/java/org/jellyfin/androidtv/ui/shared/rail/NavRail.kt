@@ -90,6 +90,9 @@ class NavRailState {
 		internal set
 
 	fun requestFocus() = runCatching { focusRequester.requestFocus() }.isSuccess
+
+	/** Closes the menu by moving focus back to the content; set by the activity. */
+	var close: () -> Unit = {}
 }
 
 /** Width the content leaves free for the closed menu. */
@@ -174,6 +177,7 @@ fun NavRail(
 				selected = selected == KEY_HOME,
 				onClick = {
 					if (selected != KEY_HOME) navigationRepository.reset(Destinations.home, clearHistory = true)
+					else state.close()
 				},
 			)
 			RailItem(
@@ -181,7 +185,7 @@ fun NavRail(
 				label = stringResource(R.string.lbl_search),
 				expanded = state.hasFocus,
 				selected = selected == KEY_SEARCH,
-				onClick = { if (selected != KEY_SEARCH) navigationRepository.navigate(Destinations.search()) },
+				onClick = { if (selected != KEY_SEARCH) navigationRepository.navigate(Destinations.search()) else state.close() },
 			)
 			for (view in views) {
 				RailItem(
@@ -192,7 +196,7 @@ fun NavRail(
 					onClick = {
 						if (selected != view.id.toString()) scope.launch {
 							navigationRepository.navigate(ItemLauncherHelper.getUserViewDestination(view))
-						}
+						} else state.close()
 					},
 				)
 			}

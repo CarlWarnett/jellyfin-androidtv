@@ -70,6 +70,8 @@ class MainActivity : FragmentActivity() {
 	private val workManager by inject<WorkManager>()
 	private val navRailState = NavRailState()
 	private val upNavigation by inject<UpNavigation>()
+	// The card that had focus when the menu was opened, to return to when it closes
+	private var lastContentFocus: java.lang.ref.WeakReference<View>? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		applyTheme()
@@ -124,8 +126,15 @@ class MainActivity : FragmentActivity() {
 					}.collectAsState(navigationRepository.canGoBack)
 					var showExit by remember { mutableStateOf(false) }
 					val focusManager = LocalFocusManager.current
+					navRailState.close = {
+						// Back to the card that had focus before the menu opened; otherwise the content
+						val previous = lastContentFocus?.get()
+						if (previous == null || !previous.isAttachedToWindow || !previous.isShown || !previous.requestFocus()) {
+							focusManager.moveFocus(FocusDirection.Right)
+						}
+					}
 					BackHandler(enabled = navRailState.visible && navRailState.hasFocus) {
-						focusManager.moveFocus(FocusDirection.Right)
+						navRailState.close()
 					}
 					// Details, season and library screens: Back goes up a level (episode → season → series →
 					// library → Home; movie → library → Home), not back along the path you took
@@ -136,7 +145,11 @@ class MainActivity : FragmentActivity() {
 						lifecycleScope.launch {
 							when (val target = upNavigation.parentOf(destination)) {
 								UpNavigation.Target.Home -> navigationRepository.reset(Destinations.home, clearHistory = true)
-								is UpNavigation.Target.Screen -> navigationRepository.navigate(target.destination, replace = true)
+								// Return to the earlier copy of that screen if you came through it, so it
+								// keeps its scroll position (e.g. Movies at P); otherwise open it fresh
+								is UpNavigation.Target.Screen -> if (!navigationRepository.goBackTo { upNavigation.sameScreen(it, target.destination) }) {
+									navigationRepository.navigate(target.destination, replace = true)
+								}
 								UpNavigation.Target.Default -> if (!navigationRepository.goBack()) showExit = true
 							}
 						}
@@ -209,7 +222,10 @@ class MainActivity : FragmentActivity() {
 				Timber.d("Left from %s: %s", focused::class.java.simpleName, when (result) { true -> "moved"; false -> "menu"; null -> "not a grid" })
 				when (result) {
 					true -> return true
-					false -> if (navRailState.requestFocus()) return true
+					false -> {
+						lastContentFocus = java.lang.ref.WeakReference(focused)
+						if (navRailState.requestFocus()) return true
+					}
 					null -> Unit
 				}
 			}

@@ -55,6 +55,12 @@ interface NavigationRepository {
 	fun goBack(): Boolean
 
 	/**
+	 * Go back to the most recent earlier screen [matches] accepts, keeping its saved state (such as
+	 * the scroll position). Returns false, without navigating, when there is no such screen.
+	 */
+	fun goBackTo(matches: (Destination.Fragment) -> Boolean): Boolean
+
+	/**
 	 * Reset navigation to the initial destination or a specific [Destination.Fragment].
 	 *
 	 * @param clearHistory Empty out the back stack
@@ -102,6 +108,14 @@ class NavigationRepositoryImpl(
 		fragmentHistory.pop()
 		_currentDestination.value = if (fragmentHistory.isEmpty()) baseDestination else fragmentHistory.peek()
 		_currentAction.tryEmit(NavigationAction.GoBack)
+		return true
+	}
+
+	override fun goBackTo(matches: (Destination.Fragment) -> Boolean): Boolean {
+		// The current screen is the last entry; look at the ones before it
+		val index = fragmentHistory.subList(0, (fragmentHistory.size - 1).coerceAtLeast(0)).indexOfLast(matches)
+		if (index < 0) return false
+		repeat(fragmentHistory.size - 1 - index) { goBack() }
 		return true
 	}
 
