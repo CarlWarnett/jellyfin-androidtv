@@ -212,6 +212,12 @@ class MainActivity : FragmentActivity() {
 	// sees it: Compose would jump straight to the menu whenever the card on the left is scrolled off
 	// screen. Move to the card on the left if there is one, otherwise open the menu.
 	override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+		// Down in a library grid: move to the poster below ourselves. Pressed faster than new rows load,
+		// normal focus search finds nothing below and jumps to the A–Z strip instead.
+		if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.action == KeyEvent.ACTION_DOWN) {
+			currentFocus?.let { focused -> if (moveDownInGrid(focused)) return true }
+		}
+
 		if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN
 			&& navRailState.visible && !navRailState.hasFocus) {
 			// Cards are small Compose views inside the leanback rows, so look for a grid above the
@@ -231,6 +237,32 @@ class MainActivity : FragmentActivity() {
 			}
 		}
 		return super.dispatchKeyEvent(event)
+	}
+
+	/** True when Down was handled inside a multi-column leanback grid (moved down, or stayed on the last row). */
+	private fun moveDownInGrid(focused: View): Boolean {
+		var view: View? = focused
+		while (view != null) {
+			when (view) {
+				is HorizontalGridView -> return false
+				is VerticalGridView -> {
+					val columns = view.alignedChildCount { it.top }
+					if (columns < 2) return false
+					val count = view.adapter?.itemCount ?: return false
+					val selected = view.selectedPosition
+					// The poster below; on a shorter last row, its last poster
+					val target = when {
+						selected + columns < count -> selected + columns
+						selected / columns < (count - 1) / columns -> count - 1
+						else -> return true // already on the last row
+					}
+					view.setSelectedPositionSmooth(target)
+					return true
+				}
+			}
+			view = view.parent as? View
+		}
+		return false
 	}
 
 	/** How many laid-out children line up with the first one on [edge] (rows or columns of a grid). */
